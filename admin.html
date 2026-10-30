@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>管理面板 · 自动发货</title>
+    <style>
+        /* ===== 柔光毛玻璃 UI 风格 ===== */
+        :root {
+            --bg-gradient: linear-gradient(135deg, #e8f0fe 0%, #fde8f0 50%, #e2f0ff 100%);
+            --card-bg: rgba(255, 255, 255, 0.65);
+            --card-border: 1px solid rgba(255, 255, 255, 0.8);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.02);
+            --primary: #007aff;
+            --primary-hover: #0066d9;
+            --danger: #ff3b30;
+            --danger-hover: #e0352b;
+            --success: #34c759;
+            --warning: #ff9500;
+            --text-primary: #1c1c1e;
+            --text-secondary: #3a3a3c;
+            --text-tertiary: #8e8e93;
+            --text-quaternary: #aeaeb2;
+            --separator: rgba(229, 229, 234, 0.6);
+            --input-bg: rgba(242, 242, 247, 0.7);
+            --radius: 20px;
+            --radius-sm: 14px;
+            --radius-xs: 10px;
+            --font: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            --transition: 0.3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { height: 100%; overflow: hidden; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            overflow: hidden;
+            overscroll-behavior: none;
+            -webkit-font-smoothing: antialiased;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .hidden { display: none !important; }
+
+        /* ===== 登录框 ===== */
+        #loginBox {
+            max-width: 360px; width: calc(100% - 24px); padding: 32px 24px;
+            background: var(--card-bg); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            border: var(--card-border); border-radius: var(--radius); box-shadow: var(--card-shadow);
+            text-align: center; margin: 16px auto; max-height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
+        }
+        #loginBox .logo { font-size: 32px; margin-bottom: 8px; }
+        #loginBox .sub { color: var(--text-tertiary); font-size: 15px; margin-bottom: 24px; font-weight: 500; }
+        #loginBox .form-group { text-align: left; margin-bottom: 16px; }
+        #loginBox .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+        #loginBox .form-group input {
+            width: 100%; padding: 12px 14px; background: var(--input-bg); border: 1px solid var(--separator);
+            border-radius: var(--radius-sm); font-size: 15px; color: var(--text-primary); outline: none; transition: all var(--transition); font-family: var(--font);
+        }
+        #loginBox .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,122,255,0.12); background: #fff; }
+        #loginBox .btn-primary {
+            width: 100%; padding: 14px; border: none; border-radius: 999px; background: linear-gradient(135deg, var(--primary), #0056b3);
+            color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: all var(--transition); font-family: var(--font); margin-top: 8px;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+        #loginBox .btn-primary:active { transform: scale(0.97); background: linear-gradient(135deg, var(--primary-hover), #004a99); }
+        #loginBox .alert-error { margin-top: 16px; padding: 10px 14px; border-radius: var(--radius-xs); background: rgba(255,59,48,0.08); color: var(--danger); font-size: 13px; border: 1px solid rgba(255,59,48,0.15); }
+        .remember-row { display: flex; align-items: center; justify-content: flex-start; gap: 8px; margin: 10px 0 16px; font-size: 14px; color: var(--text-secondary); }
+        .remember-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; border-radius: 4px; }
+
+        /* ===== 主容器 ===== */
+        #adminBox {
+            width: 100%; max-width: 600px; height: 100%; position: relative;
+            display: flex; flex-direction: column; overflow: hidden; background: transparent; margin: 0 auto;
+        }
+
+        .view {
+            display: none; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+            -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+            padding: 16px 12px 20px; scrollbar-width: thin;
+        }
+        .view.active { display: block; }
+        .view::-webkit-scrollbar { width: 4px; }
+        .view::-webkit-scrollbar-thumb { background: var(--separator); border-radius: 4px; }
+
+        /* ===== 卡片 ===== */
+        .ios-card {
+            background: var(--card-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: var(--card-border); border-radius: var(--radius); box-shadow: var(--card-shadow);
+            padding: 16px 16px 18px; margin-bottom: 12px; transition: box-shadow var(--transition);
+        }
+        .ios-card:last-child { margin-bottom: 0; }
+        .ios-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .ios-card-title { font-size: 15px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.2px; display: flex; align-items: center; gap: 6px; }
+        .ios-card-title .emoji { font-size: 18px; }
+        .ios-card-sub { font-size: 12px; color: var(--text-tertiary); font-weight: 400; }
+
+        /* ===== 顶部管理卡片 ===== */
+        .admin-header-card { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
+        .admin-header-left { display: flex; flex-direction: column; gap: 4px; }
+        .admin-header-title { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; display: flex; align-items: center; gap: 6px; }
+        .admin-balance-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+        .admin-balance-row .balance-value { font-weight: 700; color: var(--primary); font-size: 15px; }
+        .admin-header-right { display: flex; align-items: center; gap: 8px; }
+
+        /* ===== 按钮 ===== */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border: none;
+            border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition); font-family: var(--font);
+            letter-spacing: 0.2px; white-space: nowrap; min-height: 36px; touch-action: manipulation;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), #0056b3); color: #fff; box-shadow: 0 4px 12px rgba(0, 122, 255, 0.25); }
+        .btn-primary:hover { background: linear-gradient(135deg, var(--primary-hover), #004a99); }
+        .btn-danger { background: linear-gradient(135deg, var(--danger), #c0392b); color: #fff; box-shadow: 0 4px 12px rgba(255, 59, 48, 0.25); }
+        .btn-danger:hover { background: linear-gradient(135deg, var(--danger-hover), #a93226); }
+        .btn-secondary { background: var(--input-bg); color: var(--text-secondary); border: 1px solid var(--separator); }
+        .btn-secondary:hover { background: #e8e8ed; }
+        .btn-ghost { background: transparent; color: var(--primary); padding: 6px 12px; min-height: 30px; font-size: 13px; border-radius: 999px; }
+        .btn-ghost:hover { background: rgba(0,122,255,0.06); }
+        .btn-sm { padding: 4px 10px; font-size: 11px; min-height: 26px; border-radius: 999px; }
+        .btn-block { width: 100%; justify-content: center; }
+
+        /* ===== 表单 ===== */
+        .form-group { margin-bottom: 10px; }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 8px 12px; background: var(--input-bg); border: 1px solid var(--separator);
+            border-radius: var(--radius-sm); font-size: 13px; color: var(--text-primary); outline: none; transition: all var(--transition); font-family: var(--font);
+        }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,122,255,0.10); background: #fff; }
+        .form-group input::placeholder { color: var(--text-quaternary); }
+
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-grid-2 .form-group.full-width { grid-column: span 2; }
+        .batch-row { display: flex; gap: 8px; align-items: flex-end; }
+        .batch-row .form-group { flex: 1; margin-bottom: 0; }
+        .batch-row .btn { flex-shrink: 0; padding: 8px 16px; min-height: 36px; }
+
+        /* ===== Alert ===== */
+        .alert { padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; margin-top: 8px; line-height: 1.5; display: flex; align-items: center; gap: 8px; backdrop-filter: blur(10px); }
+        .alert-success { background: rgba(52,199,89,0.1); border: 1px solid rgba(52,199,89,0.2); color: #1d8b3c; }
+        .alert-error { background: rgba(255,59,48,0.1); border: 1px solid rgba(255,59,48,0.2); color: var(--danger); }
+        .alert-info { background: rgba(0,122,255,0.08); border: 1px solid rgba(0,122,255,0.15); color: var(--primary); }
+
+        /* ===== 链接展示 ===== */
+        .order-link-box {
+            background: rgba(255, 255, 255, 0.5); border-radius: var(--radius-sm); padding: 10px 12px; margin: 8px 0 6px;
+            font-size: 12px; line-height: 1.5; word-break: break-all; max-height: 100px; overflow-y: auto; white-space: pre-wrap;
+            color: var(--text-secondary); border: 1px solid rgba(255, 255, 255, 0.9); font-family: var(--font); -webkit-overflow-scrolling: touch;
+        }
+        .order-link-box::-webkit-scrollbar { width: 4px; }
+        .order-link-box::-webkit-scrollbar-thumb { background: var(--separator); border-radius: 4px; }
+        .btn-copy {
+            background: transparent; border: 1px dashed rgba(0, 122, 255, 0.4); color: var(--primary); padding: 4px 12px;
+            border-radius: 999px; font-size: 12px; cursor: pointer; transition: all var(--transition); font-family: var(--font);
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-copy:hover { border-color: var(--primary); background: rgba(0,122,255,0.04); }
+
+        /* ===== 列表 ===== */
+        .ios-list {
+            background: rgba(255, 255, 255, 0.5); border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.9);
+            overflow: hidden; margin-top: 8px; max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain;
+        }
+        .ios-list::-webkit-scrollbar { width: 4px; }
+        .ios-list::-webkit-scrollbar-thumb { background: var(--separator); border-radius: 4px; }
+
+        .ios-list-item {
+            display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--separator);
+            gap: 10px; font-size: 12px; flex-wrap: wrap; background: rgba(255, 255, 255, 0.3); transition: background 0.2s;
+        }
+        .ios-list-item:last-child { border-bottom: none; }
+        .ios-list-item:hover { background: rgba(255, 255, 255, 0.8); }
+        .ios-list-item .left { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap; }
+        .ios-list-item .left .phone { font-weight: 600; color: var(--text-primary); white-space: nowrap; }
+        .ios-list-item .left .oid { font-size: 11px; color: var(--text-tertiary); background: rgba(255, 255, 255, 0.6); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--separator); font-family: var(--font); white-space: nowrap; }
+        .ios-list-item .right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; }
+        .badge-inuse { background: rgba(0,122,255,0.12); color: var(--primary); }
+        .list-empty { padding: 24px 12px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+
+        /* ===== 历史记录相关样式 ===== */
+        .search-box {
+            display: flex; align-items: center; background: var(--input-bg);
+            border: 1px solid var(--separator); border-radius: 999px; padding: 8px 16px;
+            margin-bottom: 16px; transition: all 0.3s;
+        }
+        .search-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,122,255,0.12); background: #fff; }
+        .search-box input { border: none; background: transparent; outline: none; font-size: 14px; width: 100%; color: var(--text-primary); font-family: var(--font); }
+        .search-box input::placeholder { color: var(--text-quaternary); }
+        .search-box span { color: var(--text-tertiary); font-size: 16px; margin-right: 6px; }
+
+        .stats-bar { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .stat-item { background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.9); border-radius: var(--radius-sm); padding: 12px 16px; flex: 1; min-width: 80px; text-align: center; }
+        .stat-item .num { font-size: 20px; font-weight: 700; color: var(--primary); }
+        .stat-item .label { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; }
+
+        .record-list { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .record-list::-webkit-scrollbar { width: 4px; }
+        .record-list::-webkit-scrollbar-thumb { background: var(--separator); border-radius: 4px; }
+
+        .record-item { background: rgba(255, 255, 255, 0.5); border: 1px solid rgba(255, 255, 255, 0.9); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s, box-shadow 0.2s; }
+        .record-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.04); background: rgba(255, 255, 255, 0.8); }
+        .record-item .row-1 { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .record-item .phone { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: 1px; }
+        .record-item .oid { font-size: 12px; color: var(--text-tertiary); background: rgba(255, 255, 255, 0.8); padding: 2px 10px; border-radius: 12px; border: 1px solid var(--separator); }
+        .record-item .row-2 { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-secondary); }
+        
+        /* 新增：时间记录样式 */
+        .record-item .row-3 { display: flex; justify-content: flex-end; font-size: 11px; color: var(--text-tertiary); margin-top: 2px; }
+
+        .badge-new { background: rgba(142, 142, 147, 0.15); color: var(--text-secondary); }
+        .badge-active { background: rgba(0, 122, 255, 0.12); color: var(--primary); }
+        .badge-done { background: rgba(52, 199, 89, 0.15); color: #1D8B3C; }
+        .badge-released { background: rgba(255, 59, 48, 0.12); color: var(--danger); }
+        .badge-expired { background: rgba(255, 149, 0, 0.15); color: #B25900; }
+
+        .code-text { font-family: 'SF Mono', 'Consolas', monospace; color: var(--primary); font-weight: 600; background: rgba(0, 122, 255, 0.08); padding: 2px 8px; border-radius: 6px; letter-spacing: 2px; }
+        .empty-state { text-align: center; padding: 40px 0; color: var(--text-tertiary); font-size: 14px; }
+        .empty-state .icon { font-size: 40px; display: block; margin-bottom: 12px; }
+
+        .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--separator); flex-wrap: wrap; }
+        .btn-page { padding: 8px 16px; border-radius: 999px; border: 1px solid var(--separator); background: var(--input-bg); color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; font-family: var(--font); min-height: 36px; }
+        .btn-page:hover:not(:disabled) { background: #fff; box-shadow: 0 2px 8px rgba(0,122,255,0.12); }
+        .btn-page:active:not(:disabled) { transform: scale(0.96); }
+        .btn-page:disabled { opacity: 0.4; cursor: not-allowed; color: var(--text-tertiary); }
+        .page-info { font-size: 13px; color: var(--text-secondary); font-weight: 500; padding: 0 8px; }
+        .page-info strong { color: var(--primary); font-weight: 700; font-size: 15px; }
+        .hint-text { font-size: 12px; color: var(--text-quaternary); text-align: center; margin-top: 8px; }
+
+        /* ===== 折叠面板 ===== */
+        .config-collapse { overflow: hidden; transition: max-height 0.4s ease, margin-top 0.4s ease; max-height: 1000px; margin-top: 12px; }
+        .config-collapse.hidden-content { max-height: 0; margin-top: 0; visibility: hidden; pointer-events: none; }
+
+        /* ===== 底部导航栏 ===== */
+        .bottom-nav {
+            position: relative; flex: 0 0 auto; display: flex; justify-content: space-around; align-items: center;
+            height: 60px; height: calc(60px + env(safe-area-inset-bottom)); padding-bottom: 0; padding-bottom: env(safe-area-inset-bottom);
+            background: rgba(255, 255, 255, 0.72); backdrop-filter: blur(20px) saturate(1.8); -webkit-backdrop-filter: blur(20px) saturate(1.8);
+            border-top: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05); z-index: 1000;
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: #8e8e93; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; flex: 1; height: 100%; touch-action: manipulation; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item .icon { font-size: 22px; margin-bottom: 2px; transition: transform 0.3s ease; }
+        .nav-item.active .icon { transform: translateY(-2px) scale(1.1); }
+        .nav-item .text { letter-spacing: 0.5px; }
+
+        /* ===== Toast ===== */
+        .toast {
+            position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-30px); background: rgba(28,28,30,0.88);
+            backdrop-filter: blur(12px); color: #fff; padding: 10px 24px; border-radius: 999px; font-size: 14px; font-weight: 600;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2); z-index: 9999; opacity: 0; transition: all 0.4s cubic-bezier(0.4,0,0.2,1); pointer-events: none; font-family: var(--font);
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 420px) {
+            .ios-card { padding: 12px 12px 14px; }
+            .ios-card-title { font-size: 13px; }
+            .btn { font-size: 12px; padding: 6px 12px; min-height: 32px; }
+            .batch-row .btn { padding: 6px 12px; min-height: 32px; }
+            .form-group label { font-size: 11px; }
+            .form-group input { font-size: 12px; padding: 6px 10px; }
+            .ios-list-item { font-size: 11px; padding: 6px 10px; }
+            .admin-header-title { font-size: 16px; }
+            .form-grid-2 { grid-template-columns: 1fr; gap: 0; }
+            .form-grid-2 .form-group.full-width { grid-column: span 1; }
+            .view { padding: 12px 10px 16px; }
+            .record-item .phone { font-size: 14px; }
+            .stat-item { padding: 8px; min-width: 70px; }
+            .stat-item .num { font-size: 16px; }
+            .stat-item .label { font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- 登录页 -->
+    <div id="loginBox">
+        <div class="logo">📱</div>
+        <div class="sub">管理面板</div>
+        <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="loginPass" placeholder="请输入管理密码" onkeydown="if(event.key==='Enter')checkLogin()">
+        </div>
+        <div class="remember-row">
+            <input type="checkbox" id="rememberMe">
+            <label for="rememberMe">记住密码</label>
+        </div>
+        <button class="btn-primary" onclick="checkLogin()">登录</button>
+        <div id="loginError" class="alert-error hidden">密码错误，请重试</div>
+    </div>
+
+    <!-- 主应用区 -->
+    <div id="adminBox" class="hidden">
+        
+        <!-- ============ Tab 1: 接码 ============ -->
+        <div id="tab-receive" class="view active">
+            <div class="ios-card admin-header-card">
+                <div class="admin-header-left">
+                    <div class="admin-header-title">⚙️ 管理</div>
+                    <div class="admin-balance-row">
+                        <span>余额:</span>
+                        <span class="balance-value" id="balanceAmount">--</span>
+                        <button class="btn btn-secondary btn-sm" style="padding: 2px 8px; min-height: 22px; font-size: 11px;" onclick="fetchBalance()">刷新</button>
+                    </div>
+                    <div id="balanceError" class="hidden alert alert-error" style="margin-top: 4px; padding: 4px 8px; font-size: 11px;"></div>
+                </div>
+                <div class="admin-header-right">
+                    <button class="btn btn-ghost" onclick="logout()">退出管理</button>
+                </div>
+            </div>
+
+            <div class="ios-card">
+                <div class="ios-card-header" style="cursor: pointer; margin-bottom: 0;" onclick="toggleBaseConfig()">
+                    <span class="ios-card-title"><span class="emoji">⚙️</span> 基础配置</span>
+                    <span id="baseConfigToggleIcon" style="color: var(--text-tertiary); font-size: 13px; font-weight: 600;">▼ 展开</span>
+                </div>
+                <div id="baseConfigContent" class="config-collapse hidden-content">
+                    <div class="form-grid-2">
+                        <div class="form-group"><label>项目 ID (SID)</label><input type="text" id="configSid" placeholder="24085"></div>
+                        <div class="form-group"><label>号码类型 (ascription)</label>
+                            <select id="configAscription">
+                                <option value="">不限（留空）</option>
+                                <option value="1">1 - 只取虚拟</option>
+                                <option value="2">2 - 只取实卡</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>只取号段 (paragraph)</label><input type="text" id="configParagraph" placeholder="留空限制，如133"></div>
+                        <div class="form-group"><label>排除号段 (exclude)</label><input type="text" id="configExclude" placeholder="留空限制，如170"></div>
+                        <div class="form-group full-width"><label>对接码 (uid)</label><input type="text" id="configUid" placeholder="留空为不限制，只取该对接码号码"></div>
+                    </div>
+                    <button class="btn btn-primary btn-block" onclick="saveBaseConfig()" style="margin-top: 10px;">保存基础配置</button>
+                    <div id="baseSaveResult" class="hidden alert alert-success" style="margin-top: 8px;">✅ 基础配置已保存</div>
+                </div>
+            </div>
+
+            <div class="ios-card">
+                <div class="ios-card-header" style="margin-bottom: 10px;">
+                    <span class="ios-card-title"><span class="emoji">📱</span> 订单创建</span>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="createSingleOrder()">创建新订单</button>
+                <div class="form-group" style="margin-top: 10px; margin-bottom: 10px;">
+                    <label>批量创建</label>
+                    <div class="batch-row">
+                        <input type="number" id="batchCount" min="1" max="50" value="5">
+                        <button class="btn btn-primary" onclick="createBatchOrders()">批量创建</button>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top: 0; margin-bottom: 0;">
+                    <label>指定号码创建</label>
+                    <div class="batch-row">
+                        <input type="text" id="customOrderPhone" placeholder="输入要指定的手机号">
+                        <button class="btn btn-primary" onclick="createCustomPhoneOrder()">指定创建</button>
+                    </div>
+                </div>
+                <div id="orderResult" class="hidden" style="margin-top: 10px;">
+                    <div class="alert alert-success" id="orderSuccessMsg" style="margin-top:0; padding: 6px 10px; font-size: 12px;">✅ 订单已创建</div>
+                    <div style="font-size:12px;color:var(--text-tertiary);margin:4px 0 2px;">复制链接发送给买家：</div>
+                    <div class="order-link-box" id="orderLinkText" style="max-height: 100px; padding: 8px 10px; font-size: 12px;"></div>
+                    <button class="btn-copy" onclick="copyText('orderLinkText')" style="padding: 4px 12px; font-size: 12px;">📋 复制链接</button>
+                </div>
+            </div>
+
+            <div class="ios-card">
+                <div class="ios-card-header" style="margin-bottom: 10px;">
+                    <span class="ios-card-title"><span class="emoji">🔒</span> 释放链接</span>
+                    <span class="ios-card-sub">使订单失效</span>
+                </div>
+                <div class="batch-row">
+                    <div class="form-group"><label>订单号</label><input type="text" id="lockOid" placeholder="HZxxxxx"></div>
+                    <button class="btn btn-danger" onclick="lockOrder()">释放</button>
+                </div>
+                <div id="lockResult" class="hidden alert" style="margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <!-- ============ Tab 2: 记录 ============ -->
+        <div id="tab-record" class="view">
+            <!-- 卡片1：活跃订单 -->
+            <div class="ios-card">
+                <div class="ios-card-header">
+                    <span class="ios-card-title"><span class="emoji">📲</span> 已获取手机号订单</span>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="btn btn-secondary btn-sm" onclick="loadActiveOrders(false)">刷新</button>
+                        <button class="btn btn-danger btn-sm" onclick="releaseAllOrders()">一键释放</button>
+                    </div>
+                </div>
+                <div class="ios-list" id="activeOrderList">
+                    <div class="list-empty">加载中…</div>
+                </div>
+            </div>
+
+            <!-- 卡片2：历史记录 -->
+            <div class="ios-card">
+                <div class="ios-card-header">
+                    <span class="ios-card-title"><span class="emoji">📋</span> 获取记录</span>
+                    <button class="btn btn-secondary btn-sm" onclick="loadRecords()" id="refreshRecordsBtn">刷新数据</button>
+                </div>
+                <div class="search-box">
+                    <span>🔍</span>
+                    <input type="text" id="searchInput" placeholder="本页内搜索订单号或手机号..." oninput="filterRecords()">
+                </div>
+                <div class="stats-bar">
+                    <div class="stat-item"><div class="num" id="totalCount">0</div><div class="label">本页记录</div></div>
+                    <div class="stat-item"><div class="num" id="doneCount">0</div><div class="label">本页已完成</div></div>
+                    <div class="stat-item"><div class="num" id="activeCount">0</div><div class="label">本页等待中</div></div>
+                </div>
+                <div class="record-list" id="recordList">
+                    <div class="empty-state"><span class="icon">📭</span>点击“刷新数据”加载历史记录</div>
+                </div>
+                <div class="pagination">
+                    <button class="btn-page" id="prevBtn" onclick="prevPage()" disabled>← 上一页</button>
+                    <span class="page-info">第 <strong id="pageNum">1</strong> 页</span>
+                    <button class="btn-page" id="nextBtn" onclick="nextPage()" disabled>下一页 →</button>
+                </div>
+                <div class="hint-text">每页 20 条 · 搜索仅作用于当前页</div>
+            </div>
+        </div>
+
+        <!-- ============ Tab 3: 我的 ============ -->
+        <div id="tab-profile" class="view">
+            <div class="ios-card">
+                <div class="ios-card-header"><span class="ios-card-title"><span class="emoji">🔑</span> API 账号配置</span></div>
+                <div class="form-group"><label>API 账号 (User)</label><input type="text" id="configApiUser" placeholder="输入接码平台账号"></div>
+                <div class="form-group"><label>API 密码 (Pass)</label><input type="password" id="configApiPass" placeholder="输入接码平台密码"></div>
+                <button class="btn btn-primary btn-block" onclick="saveApiConfig()" style="margin-top: 6px;">保存 API 配置</button>
+                <div id="apiSaveResult" class="hidden alert alert-success" style="margin-top: 10px;">✅ API 配置已保存</div>
+            </div>
+            <div class="ios-card" style="text-align: center;">
+                <button class="btn btn-danger btn-block" onclick="logout()" style="padding: 12px; font-size: 15px;">退出登录</button>
+            </div>
+        </div>
+
+        <!-- 底部导航栏 -->
+        <nav class="bottom-nav">
+            <div class="nav-item" data-target="tab-record" onclick="switchTab('tab-record', this)"><span class="icon">📋</span><span class="text">记录</span></div>
+            <div class="nav-item active" data-target="tab-receive" onclick="switchTab('tab-receive', this)"><span class="icon">📨</span><span class="text">接码</span></div>
+            <div class="nav-item" data-target="tab-profile" onclick="switchTab('tab-profile', this)"><span class="icon">👤</span><span class="text">我的</span></div>
+        </nav>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            const API_BASE = '/api/order';
+            const ADMIN_PASSWORD = 'shinia299.';
+            const PAGE_SIZE = 20;
+
+            const loginBox = document.getElementById('loginBox');
+            const adminBox = document.getElementById('adminBox');
+            const loginPass = document.getElementById('loginPass');
+            const loginError = document.getElementById('loginError');
+            const toastEl = document.getElementById('toast');
+            const rememberMe = document.getElementById('rememberMe');
+
+            let toastTimer = null;
+            function showToast(msg, duration) {
+                duration = duration || 2000;
+                toastEl.textContent = msg;
+                toastEl.classList.add('show');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => { toastEl.classList.remove('show'); }, duration);
+            }
+
+            async function fetchWithTimeout(url, timeout = 5000) {
+                const controller = new AbortController();
+                const id = setTimeout(() => controller.abort(), timeout);
+                try {
+                    const response = await fetch(url, { signal: controller.signal });
+                    clearTimeout(id);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return await response.json();
+                } catch (error) {
+                    clearTimeout(id);
+                    throw error;
+                }
+            }
+
+            window.switchTab = function(targetId, element) {
+                const views = document.querySelectorAll('.view');
+                views.forEach(view => view.classList.remove('active'));
+                document.getElementById(targetId).classList.add('active');
+
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(nav => nav.classList.remove('active'));
+                element.classList.add('active');
+
+                const activeView = document.getElementById(targetId);
+                activeView.scrollTop = 0;
+
+                if (targetId === 'tab-record') {
+                    if (window.cachedActiveOrders && window.cachedActiveOrders.length > 0) window.renderActiveOrders(window.cachedActiveOrders);
+                    window.loadActiveOrders(true);
+                    
+                    if (!window.recordPollingTimer) {
+                        window.recordPollingTimer = setInterval(() => { window.loadActiveOrders(true); }, 2000);
+                    }
+                } else {
+                    if (window.recordPollingTimer) {
+                        clearInterval(window.recordPollingTimer);
+                        window.recordPollingTimer = null;
+                    }
+                }
+            };
+
+            window.toggleBaseConfig = function() {
+                const content = document.getElementById('baseConfigContent');
+                const icon = document.getElementById('baseConfigToggleIcon');
+                if (content.classList.contains('hidden-content')) {
+                    content.classList.remove('hidden-content'); icon.textContent = '▲ 收起';
+                } else {
+                    content.classList.add('hidden-content'); icon.textContent = '▼ 展开';
+                }
+            };
+
+            function loadRemembered() {
+                const saved = localStorage.getItem('admin_remembered');
+                if (saved) {
+                    try { const data = JSON.parse(saved); if (data.password) { loginPass.value = data.password; rememberMe.checked = true; } } catch(e) {}
+                }
+            }
+
+            function saveRemembered(password) {
+                if (rememberMe.checked) { localStorage.setItem('admin_remembered', JSON.stringify({ password: password })); } 
+                else { localStorage.removeItem('admin_remembered'); }
+            }
+
+            window.checkLogin = function() {
+                const pwd = loginPass.value;
+                if (pwd === ADMIN_PASSWORD) {
+                    saveRemembered(pwd);
+                    sessionStorage.setItem('admin_logged_in', 'true');
+                    loginBox.classList.add('hidden'); adminBox.classList.remove('hidden'); loginError.classList.add('hidden');
+                    initAdmin(); showToast('✅ 登录成功'); setTimeout(() => window.fetchBalance(true), 500);
+                } else {
+                    loginError.classList.remove('hidden'); loginPass.value = ''; loginPass.focus();
+                }
+            };
+
+            window.logout = function() {
+                if (!confirm('确定退出登录吗？')) return;
+                sessionStorage.removeItem('admin_logged_in');
+                adminBox.classList.add('hidden'); loginBox.classList.remove('hidden'); loginPass.value = ''; loginError.classList.add('hidden');
+                if (window.recordPollingTimer) { clearInterval(window.recordPollingTimer); window.recordPollingTimer = null; }
+                showToast('已退出');
+            };
+
+            loadRemembered();
+            if (sessionStorage.getItem('admin_logged_in') === 'true') {
+                loginBox.classList.add('hidden'); adminBox.classList.remove('hidden'); initAdmin(); setTimeout(() => window.fetchBalance(true), 500);
+            }
+
+            function initAdmin() {
+                window.recordPollingTimer = null;
+                window.cachedActiveOrders = [];
+                window.isFetchingActiveOrders = false;
+                window.recordLoaded = false;
+
+                const CONFIG_KEY = 'hao_admin_config';
+                const DEFAULT_CONFIG = { apiUser: '', apiPass: '', sid: '24085', ascription: '', paragraph: '', exclude: '', uid: '' };
+
+                function getStoredConfig() {
+                    try {
+                        const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
+                        return Object.assign({}, DEFAULT_CONFIG, cfg);
+                    } catch(e) { return Object.assign({}, DEFAULT_CONFIG); }
+                }
+
+                function applyConfigToForm(cfg) {
+                    document.getElementById('configApiUser').value    = cfg.apiUser || '';
+                    document.getElementById('configApiPass').value    = cfg.apiPass || '';
+                    document.getElementById('configSid').value        = cfg.sid || '';
+                    document.getElementById('configAscription').value = cfg.ascription || '';
+                    document.getElementById('configParagraph').value  = cfg.paragraph || '';
+                    document.getElementById('configExclude').value    = cfg.exclude || '';
+                    document.getElementById('configUid').value        = cfg.uid || '';
+                }
+
+                function collectConfig() {
+                    return {
+                        apiUser:    document.getElementById('configApiUser').value.trim(),
+                        apiPass:    document.getElementById('configApiPass').value.trim(),
+                        sid:        document.getElementById('configSid').value.trim(),
+                        ascription: document.getElementById('configAscription').value,
+                        paragraph:  document.getElementById('configParagraph').value.trim(),
+                        exclude:    document.getElementById('configExclude').value.trim(),
+                        uid:        document.getElementById('configUid').value.trim()
+                    };
+                }
+
+                applyConfigToForm(getStoredConfig());
+
+                async function loadConfigFromServer() {
+                    try {
+                        const data = await fetchWithTimeout(`${API_BASE}?action=getApiConfig`, 6000);
+                        if (!data || data.success !== true) return;
+                        const cfg = {
+                            apiUser:    data.apiUser || '',
+                            apiPass:    data.apiPass || '',
+                            sid:        data.sid || '24085',
+                            ascription: data.ascription || '',
+                            paragraph:  data.paragraph || '',
+                            exclude:    data.exclude || '',
+                            uid:        data.uid || ''
+                        };
+                        localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+                        applyConfigToForm(cfg);
+                        console.log('[config] 已从云端同步配置');
+                    } catch (e) {
+                        console.warn('拉取云端配置失败，继续使用本地缓存:', e);
+                    }
+                }
+                loadConfigFromServer();
+
+                async function persistConfig(cfg) {
+                    const qs = new URLSearchParams({
+                        action:     'saveApiConfig',
+                        apiUser:    cfg.apiUser || '',
+                        apiPass:    cfg.apiPass || '',
+                        sid:        cfg.sid || '',
+                        ascription: cfg.ascription || '',
+                        paragraph:  cfg.paragraph || '',
+                        exclude:    cfg.exclude || '',
+                        uid:        cfg.uid || ''
+                    });
+                    const resp = await fetch(`${API_BASE}?${qs.toString()}`);
+                    const data = await resp.json();
+                    if (!data.success) throw new Error(data.error || '未知错误');
+                    localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+                }
+
+                window.saveApiConfig = async function() {
+                    const apiUser = document.getElementById('configApiUser').value.trim();
+                    const apiPass = document.getElementById('configApiPass').value.trim();
+                    if (!apiUser || !apiPass) { showToast('⚠️ 请输入 API 账号和密码'); return; }
+                    showToast('⏳ 正在保存 API 配置...');
+                    try {
+                        await persistConfig(collectConfig());
+                    } catch(e) {
+                        showToast('⚠️ 保存失败: ' + e.message);
+                        return;
+                    }
+                    const el = document.getElementById('apiSaveResult');
+                    el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 2000);
+                    showToast('✅ API 配置已保存（已同步到云端）');
+                };
+
+                window.saveBaseConfig = async function() {
+                    const sid = document.getElementById('configSid').value.trim();
+                    if (!sid) { showToast('⚠️ 请输入项目 ID'); return; }
+                    showToast('⏳ 正在保存基础配置...');
+                    try {
+                        await persistConfig(collectConfig());
+                    } catch(e) {
+                        showToast('⚠️ 保存失败: ' + e.message);
+                        return;
+                    }
+                    const el = document.getElementById('baseSaveResult');
+                    el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 2000);
+                    showToast('✅ 基础配置已保存（已同步到云端）');
+                };
+
+                async function createOrderAndGetLink(specifiedPhone = null) {
+                    // 【改动】订单号缩短：HZ + 4位时间戳(36进制) + 4位随机字符 = 共 10 位（原为 14 位）
+                    const oid = 'HZ'
+                        + Date.now().toString(36).toUpperCase().slice(-4)
+                        + Math.random().toString(36).substring(2, 6).toUpperCase();
+                    const curCfg = getStoredConfig();
+                    let apiUrl = `${API_BASE}?action=createOrder&oid=${oid}&sid=${curCfg.sid}`;
+                    if (specifiedPhone) { apiUrl += `&phone=${encodeURIComponent(specifiedPhone)}`; } 
+                    else {
+                        if (curCfg.ascription) apiUrl += `&ascription=${encodeURIComponent(curCfg.ascription)}`;
+                        if (curCfg.paragraph) apiUrl += `&paragraph=${encodeURIComponent(curCfg.paragraph)}`;
+                        if (curCfg.exclude) apiUrl += `&exclude=${encodeURIComponent(curCfg.exclude)}`;
+                        if (curCfg.uid) apiUrl += `&uid=${encodeURIComponent(curCfg.uid)}`;
+                    }
+                    const resp = await fetch(apiUrl); const data = await resp.json();
+                    if (!data.success) throw new Error(data.error || '创建订单失败');
+                    // 【改动】改成路径形式：https://xxx/HZxxxxx
+                    return location.origin + '/' + oid;
+                }
+
+                function showOrderResult(htmlMsg, linkText) {
+                    document.getElementById('orderSuccessMsg').innerHTML = htmlMsg;
+                    document.getElementById('orderLinkText').textContent = linkText;
+                    document.getElementById('orderResult').classList.remove('hidden');
+                }
+
+                window.createSingleOrder = async function() { try { const link = await createOrderAndGetLink(); showOrderResult('✅ 订单已创建', link); showToast('✅ 订单已创建'); } catch(e) { showToast('⚠️ ' + e.message); } };
+
+                window.createBatchOrders = async function() {
+                    const count = parseInt(document.getElementById('batchCount').value) || 5;
+                    if (count < 1 || count > 50) { showToast('⚠️ 数量需在 1–50 之间'); return; }
+                    showToast('⏳ 正在批量创建...');
+                    try { const promises = Array.from({ length: count }, () => createOrderAndGetLink()); const links = await Promise.all(promises); showOrderResult(`✅ 已创建 ${count} 个订单`, links.join('\n')); showToast('✅ 批量创建成功'); } 
+                    catch(e) { showToast('⚠️ 批量创建出现错误：' + e.message); }
+                };
+
+                window.createCustomPhoneOrder = async function() {
+                    const phoneInput = document.getElementById('customOrderPhone');
+                    const phone = phoneInput.value.trim();
+                    if (!phone) { showToast('⚠️ 请输入指定手机号'); return; }
+                    try { const link = await createOrderAndGetLink(phone); showOrderResult(`✅ 指定号码 [${phone}] 订单已创建`, link); phoneInput.value = ''; showToast('✅ 指定号码订单已创建'); window.recordLoaded = false; } 
+                    catch(e) { showToast('⚠️ ' + e.message); }
+                };
+
+                window.lockOrder = async function(oid) {
+                    const oidToLock = oid || document.getElementById('lockOid').value.trim();
+                    if (!oidToLock) { showToast('⚠️ 请输入订单号'); return; }
+                    const curCfg = getStoredConfig(); const resultDiv = document.getElementById('lockResult');
+                    try {
+                        const resp = await fetch(`${API_BASE}?action=lockOrder&oid=${encodeURIComponent(oidToLock)}&sid=${curCfg.sid}`);
+                        const data = await resp.json(); resultDiv.classList.remove('hidden');
+                        if (data.success) {
+                            resultDiv.textContent = '✅ 该链接已被释放'; resultDiv.className = 'alert alert-success'; showToast('✅ 已释放订单 ' + oidToLock);
+                            window.recordLoaded = false; window.loadActiveOrders(true);
+                            if (document.getElementById('tab-record').classList.contains('active')) { window.loadRecords(); }
+                        } else {
+                            resultDiv.textContent = '❌ ' + (data.error || '操作失败'); resultDiv.className = 'alert alert-error'; showToast('⚠️ ' + (data.error || '释放失败'));
+                        }
+                        setTimeout(() => resultDiv.classList.add('hidden'), 3000);
+                    } catch (e) { showToast('⚠️ 请求失败：' + e.message); }
+                };
+
+                window.copyText = function(id) {
+                    const el = document.getElementById(id); if (!el) return;
+                    const text = el.textContent.trim(); if (!text) { showToast('⚠️ 没有可复制的内容'); return; }
+                    if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => showToast('📋 已复制')).catch(() => fallbackCopy(text)); } else { fallbackCopy(text); }
+                };
+                function fallbackCopy(text) {
+                    const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.top = '-9999px';
+                    document.body.appendChild(ta); ta.select();
+                    try { document.execCommand('copy'); showToast('📋 已复制'); } catch(e) { showToast('⚠️ 复制失败，请手动复制'); }
+                    document.body.removeChild(ta);
+                }
+
+                window.renderActiveOrders = function(orders) {
+                    const container = document.getElementById('activeOrderList');
+                    if (!orders || orders.length === 0) { container.innerHTML = '<div class="list-empty">暂无活跃订单</div>'; return; }
+                    container.innerHTML = orders.map(order => `
+                        <div class="ios-list-item">
+                            <div class="left"><span class="oid">${order.oid}</span><span class="phone">${order.phone || '无手机号'}</span><span class="badge badge-inuse">活跃</span></div>
+                            <div class="right"><button class="btn btn-danger btn-sm" onclick="lockOrder('${order.oid}')" style="padding:4px 10px;font-size:11px;min-height:24px;">释放</button></div>
+                        </div>`).join('');
+                };
+
+                window.loadActiveOrders = async function(isSilent = false) {
+                    if (window.isFetchingActiveOrders) return;
+                    window.isFetchingActiveOrders = true;
+                    const container = document.getElementById('activeOrderList');
+                    if (!isSilent && window.cachedActiveOrders.length === 0) { container.innerHTML = '<div class="list-empty">⏳ 加载中…</div>'; }
+                    try {
+                        const data = await fetchWithTimeout(`${API_BASE}?action=listActiveOrders`, 5000);
+                        const newOrders = data.orders || [];
+                        if (JSON.stringify(newOrders) !== JSON.stringify(window.cachedActiveOrders)) {
+                            window.cachedActiveOrders = newOrders; window.renderActiveOrders(newOrders);
+                        }
+                    } catch(e) {
+                        if (!isSilent || window.cachedActiveOrders.length === 0) {
+                            container.innerHTML = `<div class="list-empty" style="color:var(--danger);">加载失败: ${e.name === 'AbortError' ? '请求超时' : '网络异常'} <br><br><button class="btn btn-secondary btn-sm" onclick="loadActiveOrders(false)">点击重试</button></div>`;
+                        }
+                    } finally { window.isFetchingActiveOrders = false; }
+                };
+
+                let allRecords = []; let cursorStack = [null]; let currentPageIndex = 0; let hasMore = false;
+                const recordList = document.getElementById('recordList');
+                const searchInput = document.getElementById('searchInput');
+                const refreshBtn = document.getElementById('refreshRecordsBtn');
+                const totalCount = document.getElementById('totalCount');
+                const doneCount = document.getElementById('doneCount');
+                const activeCount = document.getElementById('activeCount');
+                const prevBtn = document.getElementById('prevBtn');
+                const nextBtn = document.getElementById('nextBtn');
+                const pageNum = document.getElementById('pageNum');
+
+                function getStatusInfo(status) {
+                    const map = {
+                        'new': { text: '待获取', class: 'badge-new' }, 'active': { text: '获取中', class: 'badge-active' },
+                        'done': { text: '已完成', class: 'badge-done' }, 'released': { text: '已释放', class: 'badge-released' },
+                        'expired': { text: '已超时', class: 'badge-expired' }, 'pending': { text: '待处理', class: 'badge-new' }
+                    };
+                    return map[status] || { text: status || '未知', class: 'badge-new' };
+                }
+
+                function formatTime(ts) {
+                    if (!ts) return '';
+                    const d = new Date(ts);
+                    return `${d.getMonth()+1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+                }
+
+                function renderRecords(records) {
+                    if (records.length === 0) { recordList.innerHTML = `<div class="empty-state"><span class="icon">📭</span>暂无记录</div>`; return; }
+                    recordList.innerHTML = records.map(record => {
+                        const statusInfo = getStatusInfo(record.status);
+                        const displayPhone = record.phone !== '---' ? record.phone : (record.assignedPhone ? `指定: ${record.assignedPhone}` : '未获取');
+                        const codeHtml = record.code ? `<span class="code-text">${record.code}</span>` : '';
+                        
+                        let timeStr = '';
+                        if (record.status === 'done' && record.doneTime) {
+                            timeStr = `完成: ${formatTime(record.doneTime)}`;
+                        } else if (record.status === 'active' && record.phoneAssignedAt) {
+                            timeStr = `获取: ${formatTime(record.phoneAssignedAt)}`;
+                        } else if (record.createdAt) {
+                            timeStr = `创建: ${formatTime(record.createdAt)}`;
+                        }
+
+                        return `
+                            <div class="record-item">
+                                <div class="row-1"><span class="phone">${displayPhone}</span><span class="oid">${record.oid}</span></div>
+                                <div class="row-2">
+                                    <span>状态：<span class="badge ${statusInfo.class}">${statusInfo.text}</span></span>
+                                    <span>${codeHtml}</span>
+                                </div>
+                                ${timeStr ? `<div class="row-3">${timeStr}</div>` : ''}
+                            </div>`;
+                    }).join('');
+                }
+
+                function updateStats(records) {
+                    totalCount.textContent = records.length;
+                    doneCount.textContent = records.filter(r => r.status === 'done').length;
+                    activeCount.textContent = records.filter(r => r.status === 'active').length;
+                }
+
+                window.filterRecords = function() {
+                    const keyword = searchInput.value.trim().toLowerCase();
+                    if (!keyword) { renderRecords(allRecords); return; }
+                    const filtered = allRecords.filter(record =>
+                        record.oid.toLowerCase().includes(keyword) ||
+                        (record.phone && record.phone.includes(keyword)) ||
+                        (record.assignedPhone && record.assignedPhone.includes(keyword))
+                    );
+                    renderRecords(filtered);
+                };
+
+                function updatePaginationUI() {
+                    pageNum.textContent = currentPageIndex + 1;
+                    prevBtn.disabled = currentPageIndex === 0; nextBtn.disabled = !hasMore;
+                }
+
+                async function loadPage(pageIndex) {
+                    if (pageIndex < 0 || pageIndex >= cursorStack.length) return;
+                    const cursor = cursorStack[pageIndex];
+                    refreshBtn.disabled = true; refreshBtn.textContent = '加载中...';
+                    prevBtn.disabled = true; nextBtn.disabled = true;
+                    recordList.innerHTML = `<div class="empty-state"><span class="icon">⏳</span>正在加载第 ${pageIndex + 1} 页...</div>`;
+                    try {
+                        const url = new URL(API_BASE, location.origin);
+                        url.searchParams.set('action', 'listAllOrders'); url.searchParams.set('limit', PAGE_SIZE);
+                        if (cursor) url.searchParams.set('cursor', cursor);
+                        const data = await fetchWithTimeout(url.toString(), 8000);
+                        if (!data.orders) throw new Error(data.error || '数据格式错误');
+                        if (!data.list_complete && data.cursor) {
+                            hasMore = true;
+                            if (cursorStack.length <= pageIndex + 1) { cursorStack.push(data.cursor); } else { cursorStack[pageIndex + 1] = data.cursor; }
+                        } else { hasMore = false; cursorStack = cursorStack.slice(0, pageIndex + 1); }
+                        currentPageIndex = pageIndex; allRecords = data.orders; window.recordLoaded = true;
+                        updateStats(allRecords); window.filterRecords(); updatePaginationUI();
+                    } catch (e) {
+                        recordList.innerHTML = `<div class="empty-state" style="color:var(--danger);"><span class="icon">❌</span>加载失败：${e.message}</div>`;
+                        hasMore = false; updatePaginationUI();
+                    } finally {
+                        refreshBtn.disabled = false; refreshBtn.textContent = '刷新数据';
+                    }
+                }
+
+                window.loadRecords = function() {
+                    currentPageIndex = 0; cursorStack = [null]; searchInput.value = ''; return loadPage(0);
+                };
+
+                window.prevPage = function() { if (currentPageIndex > 0) loadPage(currentPageIndex - 1); };
+                window.nextPage = function() { if (hasMore) loadPage(currentPageIndex + 1); };
+
+                window.releaseAllOrders = async function() {
+                    if (!confirm('确定释放所有已获取手机号的订单吗？此操作不可撤销！')) return;
+                    try {
+                        const resp = await fetch(`${API_BASE}?action=releaseAllOrders`);
+                        const data = await resp.json();
+                        if (data.success) {
+                            showToast('✅ 已全部释放'); window.recordLoaded = false; window.loadActiveOrders(true);
+                            if (document.getElementById('tab-record').classList.contains('active')) { window.loadRecords(); }
+                        } else { showToast('⚠️ ' + (data.error || '操作失败')); }
+                    } catch(e) { showToast('⚠️ 请求失败：' + e.message); }
+                };
+
+                window.fetchBalance = async function(silent) {
+                    const amountEl = document.getElementById('balanceAmount'); const errorEl = document.getElementById('balanceError');
+                    amountEl.textContent = '...'; errorEl.classList.add('hidden');
+                    try {
+                        const data = await fetchWithTimeout(`${API_BASE}?action=getBalance`, 5000);
+                        if (data.balance !== undefined) {
+                            amountEl.textContent = data.balance; if (!silent) showToast('✅ 余额已更新');
+                        } else {
+                            amountEl.textContent = '❌'; errorEl.textContent = data.error || '查询失败'; errorEl.classList.remove('hidden');
+                        }
+                    } catch (e) {
+                        amountEl.textContent = '⚠️'; errorEl.textContent = '请求失败：' + e.message; errorEl.classList.remove('hidden');
+                    }
+                };
+            }
+        })();
+    </script>
+</body>
+</html>
