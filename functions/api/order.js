@@ -268,7 +268,8 @@ export async function onRequest(context) {
           ascription: cfg.ascription || '',
           paragraph: cfg.paragraph || '',
           exclude: cfg.exclude || '',
-          uid: cfg.uid || ''
+          uid: cfg.uid || '',
+          customNotice: cfg.customNotice || '' // 【新增】读取用户端公告并返回
         });
       }
 
@@ -280,6 +281,7 @@ export async function onRequest(context) {
         const newParagraph = url.searchParams.get('paragraph') || '';
         const newExclude = url.searchParams.get('exclude') || '';
         const newUid = url.searchParams.get('uid') || '';
+        const newCustomNotice = url.searchParams.get('customNotice') || ''; // 【新增】获取用户端公告
 
         const existing = await getConfig('__api_config__') || {};
 
@@ -304,7 +306,8 @@ export async function onRequest(context) {
           ascription: newAscription,
           paragraph: newParagraph,
           exclude: newExclude,
-          uid: newUid
+          uid: newUid,
+          customNotice: newCustomNotice // 【新增】将用户端公告存入数据库
         };
 
         await putConfig('__api_config__', newConfig);
