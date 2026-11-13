@@ -296,7 +296,7 @@
         <div class="sub">请输入访问密码</div>
         <div class="form-group">
             <label>密码</label>
-            <input type="password" id="loginPass" placeholder="请输入门槛密码或管理密码" onkeydown="if(event.key==='Enter')checkLogin()">
+            <input type="password" id="loginPass" placeholder="请输入网页密码或管理密码" onkeydown="if(event.key==='Enter')checkLogin()">
         </div>
         <div class="remember-row">
             <input type="checkbox" id="rememberMe">
@@ -445,14 +445,14 @@
                 <div id="apiSaveResult" class="hidden alert alert-success" style="margin-top: 10px;">✅ API 配置已保存</div>
             </div>
 
-            <!-- 新增：修改门槛密码（仅管理员可见） -->
+            <!-- 新增：修改网页密码（仅管理员可见） -->
             <div class="ios-card" id="changeGateCard">
-                <div class="ios-card-header"><span class="ios-card-title"><span class="emoji">🚪</span> 修改门槛密码</span></div>
-                <div class="form-group"><label>新门槛密码</label><input type="password" id="newGatePassword" placeholder="至少 4 位"></div>
-                <div class="form-group"><label>确认门槛密码</label><input type="password" id="confirmGatePassword" placeholder="再次输入新门槛密码"></div>
-                <button class="btn btn-primary btn-block" onclick="changeGatePassword()" style="margin-top: 6px;">保存门槛密码</button>
+                <div class="ios-card-header"><span class="ios-card-title"><span class="emoji">🚪</span> 修改网页密码</span></div>
+                <div class="form-group"><label>新网页密码</label><input type="password" id="newGatePassword" placeholder="至少 4 位"></div>
+                <div class="form-group"><label>确认网页密码</label><input type="password" id="confirmGatePassword" placeholder="再次输入新网页密码"></div>
+                <button class="btn btn-primary btn-block" onclick="changeGatePassword()" style="margin-top: 6px;">保存网页密码</button>
                 <div class="alert alert-info" style="margin-top: 10px; font-size: 12px;">
-                    当前门槛密码：<span id="currentGateDisplay" style="font-weight:700;">----</span>
+                    当前网页密码：<span id="currentGateDisplay" style="font-weight:700;">----</span>
                 </div>
             </div>
 
@@ -475,8 +475,8 @@
 
             const API_BASE = '/api/order';
             const ADMIN_PASSWORD = 'shinia599.';          // 管理端密码
-            const DEFAULT_GATE_PASSWORD = 'gate888';      // 默认门槛密码（可在“我的”里修改）
-            const GATE_STORAGE_KEY = 'gate_password';     // 门槛密码存储键
+            const DEFAULT_GATE_PASSWORD = 'gate888';      // 默认网页密码（可在“我的”里修改）
+            const GATE_STORAGE_KEY = 'gate_password';     // 网页密码存储键
             const PAGE_SIZE = 20;
 
             const loginBox = document.getElementById('loginBox');
@@ -646,28 +646,28 @@
                     const releaseAllBtn = document.getElementById('releaseAllBtn');
                     if (releaseAllBtn) releaseAllBtn.style.display = isAdmin ? '' : 'none';
 
-                    // 修改门槛密码卡片（仅管理员可见）
+                    // 修改网页密码卡片（仅管理员可见）
                     const changeGateCard = document.getElementById('changeGateCard');
                     if (changeGateCard) changeGateCard.style.display = isAdmin ? '' : 'none';
 
-                    // 显示当前门槛密码
+                    // 显示当前网页密码
                     const gateDisplay = document.getElementById('currentGateDisplay');
                     if (gateDisplay) gateDisplay.textContent = getGatePassword();
                 }
                 applyModeUI();
 
-                /* ===== 修改门槛密码 ===== */
+                /* ===== 修改网页密码 ===== */
                 window.changeGatePassword = function() {
                     const np = document.getElementById('newGatePassword').value.trim();
                     const cp = document.getElementById('confirmGatePassword').value.trim();
-                    if (!np || np.length < 4) { showToast('⚠️ 门槛密码至少 4 位'); return; }
+                    if (!np || np.length < 4) { showToast('⚠️ 网页密码至少 4 位'); return; }
                     if (np !== cp) { showToast('⚠️ 两次输入不一致'); return; }
-                    if (np === ADMIN_PASSWORD) { showToast('⚠️ 门槛密码不能与管理端密码相同'); return; }
+                    if (np === ADMIN_PASSWORD) { showToast('⚠️ 网页密码不能与管理端密码相同'); return; }
                     localStorage.setItem(GATE_STORAGE_KEY, np);
                     document.getElementById('currentGateDisplay').textContent = np;
                     document.getElementById('newGatePassword').value = '';
                     document.getElementById('confirmGatePassword').value = '';
-                    showToast('✅ 门槛密码已修改');
+                    showToast('✅ 网页密码已修改');
                 };
 
                 /* ===== 配置读写 ===== */
