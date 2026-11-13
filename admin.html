@@ -293,10 +293,10 @@
     <!-- 登录页 -->
     <div id="loginBox">
         <div class="logo">📱</div>
-        <div class="sub">管理面板</div>
+        <div class="sub">请输入访问密码</div>
         <div class="form-group">
             <label>密码</label>
-            <input type="password" id="loginPass" placeholder="请输入管理密码" onkeydown="if(event.key==='Enter')checkLogin()">
+            <input type="password" id="loginPass" placeholder="请输入门槛密码或管理密码" onkeydown="if(event.key==='Enter')checkLogin()">
         </div>
         <div class="remember-row">
             <input type="checkbox" id="rememberMe">
@@ -313,7 +313,7 @@
         <div id="tab-receive" class="view active">
             <div class="ios-card admin-header-card">
                 <div class="admin-header-left">
-                    <div class="admin-header-title">⚙️ 管理</div>
+                    <div class="admin-header-title">⚙️ <span id="headerTitleText">管理</span></div>
                     <div class="admin-balance-row">
                         <span>余额:</span>
                         <span class="balance-value" id="balanceAmount">--</span>
@@ -322,11 +322,12 @@
                     <div id="balanceError" class="hidden alert alert-error" style="margin-top: 4px; padding: 4px 8px; font-size: 11px;"></div>
                 </div>
                 <div class="admin-header-right">
-                    <button class="btn btn-ghost" onclick="logout()">退出管理</button>
+                    <button class="btn btn-ghost" onclick="logout()">退出</button>
                 </div>
             </div>
 
-            <div class="ios-card">
+            <!-- 基础配置卡片（仅管理员可见） -->
+            <div class="ios-card" id="baseConfigCard">
                 <div class="ios-card-header" style="cursor: pointer; margin-bottom: 0;" onclick="toggleBaseConfig()">
                     <span class="ios-card-title"><span class="emoji">⚙️</span> 基础配置</span>
                     <span id="baseConfigToggleIcon" style="color: var(--text-tertiary); font-size: 13px; font-weight: 600;">▼ 展开</span>
@@ -377,7 +378,8 @@
                 </div>
             </div>
 
-            <div class="ios-card">
+            <!-- 释放链接卡片（仅管理员可见） -->
+            <div class="ios-card" id="lockCard">
                 <div class="ios-card-header" style="margin-bottom: 10px;">
                     <span class="ios-card-title"><span class="emoji">🔒</span> 释放链接</span>
                     <span class="ios-card-sub">使订单失效</span>
@@ -398,7 +400,7 @@
                     <span class="ios-card-title"><span class="emoji">📲</span> 已获取手机号订单</span>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
                         <button class="btn btn-secondary btn-sm" onclick="loadActiveOrders(false)">刷新</button>
-                        <button class="btn btn-danger btn-sm" onclick="releaseAllOrders()">一键释放</button>
+                        <button class="btn btn-danger btn-sm" id="releaseAllBtn" onclick="releaseAllOrders()">一键释放</button>
                     </div>
                 </div>
                 <div class="ios-list" id="activeOrderList">
@@ -442,6 +444,18 @@
                 <button class="btn btn-primary btn-block" onclick="saveApiConfig()" style="margin-top: 6px;">保存 API 配置</button>
                 <div id="apiSaveResult" class="hidden alert alert-success" style="margin-top: 10px;">✅ API 配置已保存</div>
             </div>
+
+            <!-- 新增：修改门槛密码（仅管理员可见） -->
+            <div class="ios-card" id="changeGateCard">
+                <div class="ios-card-header"><span class="ios-card-title"><span class="emoji">🚪</span> 修改门槛密码</span></div>
+                <div class="form-group"><label>新门槛密码</label><input type="password" id="newGatePassword" placeholder="至少 4 位"></div>
+                <div class="form-group"><label>确认门槛密码</label><input type="password" id="confirmGatePassword" placeholder="再次输入新门槛密码"></div>
+                <button class="btn btn-primary btn-block" onclick="changeGatePassword()" style="margin-top: 6px;">保存门槛密码</button>
+                <div class="alert alert-info" style="margin-top: 10px; font-size: 12px;">
+                    当前门槛密码：<span id="currentGateDisplay" style="font-weight:700;">----</span>
+                </div>
+            </div>
+
             <div class="ios-card" style="text-align: center;">
                 <button class="btn btn-danger btn-block" onclick="logout()" style="padding: 12px; font-size: 15px;">退出登录</button>
             </div>
@@ -460,7 +474,9 @@
             'use strict';
 
             const API_BASE = '/api/order';
-            const ADMIN_PASSWORD = 'shinia599.';
+            const ADMIN_PASSWORD = 'shinia599.';          // 管理端密码
+            const DEFAULT_GATE_PASSWORD = 'gate888';      // 默认门槛密码（可在“我的”里修改）
+            const GATE_STORAGE_KEY = 'gate_password';     // 门槛密码存储键
             const PAGE_SIZE = 20;
 
             const loginBox = document.getElementById('loginBox');
@@ -469,6 +485,13 @@
             const loginError = document.getElementById('loginError');
             const toastEl = document.getElementById('toast');
             const rememberMe = document.getElementById('rememberMe');
+
+            // 当前登录模式：'admin' 或 'user'
+            window.currentMode = null;
+
+            function getGatePassword() {
+                return localStorage.getItem(GATE_STORAGE_KEY) || DEFAULT_GATE_PASSWORD;
+            }
 
             let toastTimer = null;
             function showToast(msg, duration) {
@@ -544,27 +567,50 @@
 
             window.checkLogin = function() {
                 const pwd = loginPass.value;
+                let mode = null;
                 if (pwd === ADMIN_PASSWORD) {
+                    mode = 'admin';
+                } else if (pwd === getGatePassword()) {
+                    mode = 'user';
+                }
+
+                if (mode) {
+                    window.currentMode = mode;
                     saveRemembered(pwd);
-                    sessionStorage.setItem('admin_logged_in', 'true');
-                    loginBox.classList.add('hidden'); adminBox.classList.remove('hidden'); loginError.classList.add('hidden');
-                    initAdmin(); showToast('✅ 登录成功'); setTimeout(() => window.fetchBalance(true), 500);
+                    sessionStorage.setItem('admin_logged_in', mode);
+                    loginBox.classList.add('hidden');
+                    adminBox.classList.remove('hidden');
+                    loginError.classList.add('hidden');
+                    initAdmin();
+                    showToast(mode === 'admin' ? '✅ 管理员登录成功' : '✅ 欢迎访问');
+                    setTimeout(() => window.fetchBalance(true), 500);
                 } else {
-                    loginError.classList.remove('hidden'); loginPass.value = ''; loginPass.focus();
+                    loginError.classList.remove('hidden');
+                    loginPass.value = '';
+                    loginPass.focus();
                 }
             };
 
             window.logout = function() {
                 if (!confirm('确定退出登录吗？')) return;
                 sessionStorage.removeItem('admin_logged_in');
-                adminBox.classList.add('hidden'); loginBox.classList.remove('hidden'); loginPass.value = ''; loginError.classList.add('hidden');
+                adminBox.classList.add('hidden');
+                loginBox.classList.remove('hidden');
+                loginPass.value = '';
+                loginError.classList.add('hidden');
                 if (window.recordPollingTimer) { clearInterval(window.recordPollingTimer); window.recordPollingTimer = null; }
                 showToast('已退出');
             };
 
+            // 自动恢复登录状态
             loadRemembered();
-            if (sessionStorage.getItem('admin_logged_in') === 'true') {
-                loginBox.classList.add('hidden'); adminBox.classList.remove('hidden'); initAdmin(); setTimeout(() => window.fetchBalance(true), 500);
+            const savedMode = sessionStorage.getItem('admin_logged_in');
+            if (savedMode === 'admin' || savedMode === 'user') {
+                window.currentMode = savedMode;
+                loginBox.classList.add('hidden');
+                adminBox.classList.remove('hidden');
+                initAdmin();
+                setTimeout(() => window.fetchBalance(true), 500);
             }
 
             function initAdmin() {
@@ -576,6 +622,55 @@
                 const CONFIG_KEY = 'hao_admin_config';
                 const DEFAULT_CONFIG = { apiUser: '', apiPass: '', sid: '24085', ascription: '', paragraph: '', exclude: '', uid: '' };
 
+                /* ===== 根据当前模式调整界面 ===== */
+                function applyModeUI() {
+                    const isAdmin = window.currentMode === 'admin';
+
+                    // 顶部标题
+                    const headerTitle = document.getElementById('headerTitleText');
+                    if (headerTitle) headerTitle.textContent = isAdmin ? '管理' : '接码';
+
+                    // “我的”导航按钮（仅管理员可见）
+                    const profileNav = document.querySelector('.nav-item[data-target="tab-profile"]');
+                    if (profileNav) profileNav.style.display = isAdmin ? '' : 'none';
+
+                    // 基础配置卡片（仅管理员可见）
+                    const baseCard = document.getElementById('baseConfigCard');
+                    if (baseCard) baseCard.style.display = isAdmin ? '' : 'none';
+
+                    // 释放链接卡片（仅管理员可见）
+                    const lockCard = document.getElementById('lockCard');
+                    if (lockCard) lockCard.style.display = isAdmin ? '' : 'none';
+
+                    // 一键释放按钮（仅管理员可见）
+                    const releaseAllBtn = document.getElementById('releaseAllBtn');
+                    if (releaseAllBtn) releaseAllBtn.style.display = isAdmin ? '' : 'none';
+
+                    // 修改门槛密码卡片（仅管理员可见）
+                    const changeGateCard = document.getElementById('changeGateCard');
+                    if (changeGateCard) changeGateCard.style.display = isAdmin ? '' : 'none';
+
+                    // 显示当前门槛密码
+                    const gateDisplay = document.getElementById('currentGateDisplay');
+                    if (gateDisplay) gateDisplay.textContent = getGatePassword();
+                }
+                applyModeUI();
+
+                /* ===== 修改门槛密码 ===== */
+                window.changeGatePassword = function() {
+                    const np = document.getElementById('newGatePassword').value.trim();
+                    const cp = document.getElementById('confirmGatePassword').value.trim();
+                    if (!np || np.length < 4) { showToast('⚠️ 门槛密码至少 4 位'); return; }
+                    if (np !== cp) { showToast('⚠️ 两次输入不一致'); return; }
+                    if (np === ADMIN_PASSWORD) { showToast('⚠️ 门槛密码不能与管理端密码相同'); return; }
+                    localStorage.setItem(GATE_STORAGE_KEY, np);
+                    document.getElementById('currentGateDisplay').textContent = np;
+                    document.getElementById('newGatePassword').value = '';
+                    document.getElementById('confirmGatePassword').value = '';
+                    showToast('✅ 门槛密码已修改');
+                };
+
+                /* ===== 配置读写 ===== */
                 function getStoredConfig() {
                     try {
                         const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY)) || {};
@@ -678,7 +773,6 @@
                 };
 
                 async function createOrderAndGetLink(specifiedPhone = null) {
-                    // 【改动】订单号缩短：HZ + 4位时间戳(36进制) + 4位随机字符 = 共 10 位（原为 14 位）
                     const oid = 'HZ'
                         + Date.now().toString(36).toUpperCase().slice(-4)
                         + Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -693,7 +787,6 @@
                     }
                     const resp = await fetch(apiUrl); const data = await resp.json();
                     if (!data.success) throw new Error(data.error || '创建订单失败');
-                    // 【改动】改成路径形式：https://xxx/HZxxxxx
                     return location.origin + '/' + oid;
                 }
 
@@ -722,6 +815,8 @@
                 };
 
                 window.lockOrder = async function(oid) {
+                    // 非管理员禁止释放
+                    if (window.currentMode !== 'admin') { showToast('⚠️ 无权限操作'); return; }
                     const oidToLock = oid || document.getElementById('lockOid').value.trim();
                     if (!oidToLock) { showToast('⚠️ 请输入订单号'); return; }
                     const curCfg = getStoredConfig(); const resultDiv = document.getElementById('lockResult');
@@ -752,12 +847,13 @@
                 }
 
                 window.renderActiveOrders = function(orders) {
+                    const isAdmin = window.currentMode === 'admin';
                     const container = document.getElementById('activeOrderList');
                     if (!orders || orders.length === 0) { container.innerHTML = '<div class="list-empty">暂无活跃订单</div>'; return; }
                     container.innerHTML = orders.map(order => `
                         <div class="ios-list-item">
                             <div class="left"><span class="oid">${order.oid}</span><span class="phone">${order.phone || '无手机号'}</span><span class="badge badge-inuse">活跃</span></div>
-                            <div class="right"><button class="btn btn-danger btn-sm" onclick="lockOrder('${order.oid}')" style="padding:4px 10px;font-size:11px;min-height:24px;">释放</button></div>
+                            ${isAdmin ? `<div class="right"><button class="btn btn-danger btn-sm" onclick="lockOrder('${order.oid}')" style="padding:4px 10px;font-size:11px;min-height:24px;">释放</button></div>` : ''}
                         </div>`).join('');
                 };
 
@@ -889,6 +985,7 @@
                 window.nextPage = function() { if (hasMore) loadPage(currentPageIndex + 1); };
 
                 window.releaseAllOrders = async function() {
+                    if (window.currentMode !== 'admin') { showToast('⚠️ 无权限操作'); return; }
                     if (!confirm('确定释放所有已获取手机号的订单吗？此操作不可撤销！')) return;
                     try {
                         const resp = await fetch(`${API_BASE}?action=releaseAllOrders`);
